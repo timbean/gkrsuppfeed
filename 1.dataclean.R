@@ -81,6 +81,7 @@ for(i in unique(ses.recaps$left.ear)){
 # 3. Create unique capture histories for export
 #######
 
+# 2015
 all.cap.hist.15 <- NULL
 
 for(i in unique(gkr.2015$left.ear)){
@@ -103,3 +104,38 @@ colnames(all.cap.hist.15) <- c("plot", "indiv", "hist")
 temp <- as.data.frame.matrix(table(all.cap.hist.15$hist, all.cap.hist.15$plot))
 temp$cap.hist <- row.names(temp)
 sum.hist.15 <- gather(temp, cap.hist, site, IVC:P89E)
+colnames(sum.hist.15) <- c("cap.hist", "site", "num")
+spread.hist <- spread(sum.hist.15, site, num)
+
+# 2016
+all.cap.hist.16 <- NULL
+
+for(i in unique(gkr.2016$left.ear)){
+  cur.gkr <- subset(gkr.2016, left.ear == i)
+  cur.trap.hist <- NULL
+  for(j in 1:5){
+    if(j %in% unique(cur.gkr$night)){
+      cur.trap.hist <- paste(cur.trap.hist, "1", sep="")    
+    } else {
+      cur.trap.hist <- paste(cur.trap.hist, "0", sep="")
+    }
+  }
+  cur.rat <- data.frame(unique(cur.gkr$plot), i, cur.trap.hist)
+  all.cap.hist.16 <- rbind(all.cap.hist.16, cur.rat)
+}
+colnames(all.cap.hist.16) <- c("plot", "indiv", "hist")
+
+# Generate table of counts of different recapture histories for 2016
+temp <- as.data.frame.matrix(table(all.cap.hist.16$hist, all.cap.hist.16$plot))
+temp$cap.hist <- row.names(temp)
+mark.inp <- temp
+
+# alternate attempts at creating a summary table
+#sum.hist.16 <- gather(temp, cap.hist, site, IVC:P89E)
+#colnames(sum.hist.16) <- c("cap.hist", "site", "num")
+
+
+
+
+
+
