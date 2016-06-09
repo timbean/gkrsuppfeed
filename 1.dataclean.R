@@ -103,9 +103,22 @@ colnames(all.cap.hist.15) <- c("plot", "indiv", "hist")
 #sum.cap.hist.15 <- count(all.cap.hist.15$plot, all.cap.hist.15$hist)
 temp <- as.data.frame.matrix(table(all.cap.hist.15$hist, all.cap.hist.15$plot))
 temp$cap.hist <- row.names(temp)
-sum.hist.15 <- gather(temp, cap.hist, site, IVC:P89E)
-colnames(sum.hist.15) <- c("cap.hist", "site", "num")
-spread.hist <- spread(sum.hist.15, site, num)
+#sum.hist.15 <- gather(temp, cap.hist, site, IVC:P89E)
+#colnames(sum.hist.15) <- c("cap.hist", "site", "num")
+#spread.hist <- spread(sum.hist.15, site, num)
+
+mark.inp <- data.frame(temp$cap.hist, temp[,1:6])
+
+# alternate attempts at creating a summary table
+#sum.hist.16 <- gather(temp, cap.hist, site, IVC:P89E)
+#colnames(sum.hist.16) <- c("cap.hist", "site", "num")
+
+# Save output
+mark.out.15 <- apply(mark.inp, 1, paste, collapse=" ")
+mark.out.15 <- paste(mark.out.15, ";", sep="")
+fileconn <- file("../Analysis/cnpa15.inp")
+writeLines(mark.out.15, fileconn)
+close(fileconn)
 
 # 2016
 all.cap.hist.16 <- NULL
@@ -128,14 +141,18 @@ colnames(all.cap.hist.16) <- c("plot", "indiv", "hist")
 # Generate table of counts of different recapture histories for 2016
 temp <- as.data.frame.matrix(table(all.cap.hist.16$hist, all.cap.hist.16$plot))
 temp$cap.hist <- row.names(temp)
-mark.inp <- temp
+mark.inp <- data.frame(temp$cap.hist, temp[,1:6])
 
 # alternate attempts at creating a summary table
 #sum.hist.16 <- gather(temp, cap.hist, site, IVC:P89E)
 #colnames(sum.hist.16) <- c("cap.hist", "site", "num")
 
-
-
+# Save output
+mark.out.16 <- apply(mark.inp, 1, paste, collapse=" ")
+mark.out.16 <- paste(mark.out.16, ";", sep="")
+fileconn <- file("../Analysis/cnpa16.inp")
+writeLines(mark.out.16, fileconn)
+close(fileconn)
 
 
 
