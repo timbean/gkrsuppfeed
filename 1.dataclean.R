@@ -155,4 +155,52 @@ writeLines(mark.out.16, fileconn)
 close(fileconn)
 
 
+## Create Robust Design Capture History
+gkr.16.temp <- data.frame(gkr.2016$date, gkr.2016$night, gkr.2016$plot,
+                          gkr.2016$trap, gkr.2016$left.ear)
+gkr.16.temp$ses <- rep(2, nrow(gkr.16.temp))
+colnames(gkr.16.temp) <- c("date", "night", "plot", "trap", "left.ear", "session")
 
+gkr.15.temp <- data.frame(gkr.2015$date, gkr.2015$night, gkr.2015$plot,
+                          gkr.2015$trap, gkr.2015$left.ear)
+gkr.15.temp$ses <- rep(1, nrow(gkr.15.temp))
+colnames(gkr.15.temp) <- c("date", "night", "plot", "trap", "left.ear", "session")
+
+combined.data <- rbind(gkr.15.temp, gkr.16.temp)
+
+comb.cap.hist <- NULL
+
+for(i in unique(combined.data$left.ear)){
+  cur.gkr <- subset(combined.data, left.ear == i)
+  cur.trap.hist <- NULL
+  cur.ses <- subset(cur.gkr, session==1)
+  for(j in 1:5){
+    if(j %in% unique(cur.ses$night)){
+      cur.trap.hist <- paste(cur.trap.hist, "1", sep="")
+    } else {
+      cur.trap.hist <- paste(cur.trap.hist, "0", sep="")
+    }
+  }
+  
+  cur.ses <- subset(cur.gkr, session==2)
+  for(j in 1:5){
+    if(j %in% unique(cur.ses$night)){
+      cur.trap.hist <- paste(cur.trap.hist, "1", sep="")    
+    } else {
+      cur.trap.hist <- paste(cur.trap.hist, "0", sep="")
+    }
+  }
+  cur.rat <- data.frame(unique(cur.gkr$plot), i, cur.trap.hist)
+  comb.cap.hist <- rbind(comb.cap.hist, cur.rat)
+}
+colnames(comb.cap.hist) <- c("plot", "indiv", "hist")
+temp <- as.data.frame.matrix(table(comb.cap.hist$hist, comb.cap.hist$plot))
+temp$cap.hist <- row.names(temp)
+mark.inp <- data.frame(temp$cap.hist, temp[,1:6])
+
+# Save output
+mark.out.comb <- apply(mark.inp, 1, paste, collapse=" ")
+mark.out.comb <- paste(mark.out.comb, ";", sep="")
+fileconn <- file("../Analysis/cnpa-robust.inp")
+writeLines(mark.out.comb, fileconn)
+close(fileconn)
