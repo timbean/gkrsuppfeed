@@ -106,6 +106,15 @@ colnames(weight.diffs) <- c("plot", "rat", "treatment", "time", "weight")
 weight.aov <- lm(weight ~ treatment*time, data=weight.diffs)
 summary(weight.aov)
 boxplot(weight.diffs$weight ~ weight.diffs$treatment + weight.diffs$time)
+
+
+### Reproductive status
+gkr.data <- subset(gkr.data, type=="N" | type=="S")
+before <- subset(gkr.data, time=="before")
+after <- subset(gkr.data, time=="after")
+before.test <- glm(repro2 ~ treatment, data=before, family="binomial")
+after.test <- glm(repro2 ~ treatment, data=after, family="binomial")
+
 # Plot unique inidividual results by species from 2015
 mna.before <- subset(my.data, type == "N")
 mna.before <- subset(my.data, time == "before")
