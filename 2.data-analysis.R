@@ -3,24 +3,84 @@
 library(ggplot2)
 library(plyr)
 library(tidyr)
+library(reshape)
 
 #######
 # 1. Load and clean data
 #######
 
 ### Load all Lokern data
-lokern <- read.csv("../Data/Lokern/lokern-trap-data.csv")
+my.data <- read.csv("../Data/supp-data-combined.csv")
 
 #######
 # 2. Visualize prelim results (total captured at each site, movement, body weight,
 #        repro success)
 #######
 
+# Subtract minimun number of alive across years/plots...
+mna <- subset(my.data, type=="N")
+mna$species <- factor(mna$species)
+#table(mna$plot, mna$time, mna$treatment, mna$species)
+#test <- ddply(mna, .(time, site), summarize, count(species))
+#test <- aggregate(mna$species ~ mna$site + mna$time, FUN="count")
+#test <- cast(mna, site ~ time, value=species, count)
+
+# sum.data <- NULL
+# for(i in levels(mna$species)){
+#   cur.spec <- subset(mna, species==i)
+#   for(j in unique(cur.spec$plot)){
+#     cur.plot <- subset(cur.spec, plot==j)
+#     for(k in unique(cur.plot$treatment)){
+#       cur.treatment <- subset(cur.plot, treatment==k)
+#       for(l in unique(cur.plot$time)){
+#         cur.time <- subset(cur.treatment, time==l)
+#         sum.data <- rbind(sum.data, data.frame(i,j,k,l, nrow(cur.time)))
+#       }
+#     }
+#   }
+# }
+# colnames(sum.data) <- c("species", "plot", "treatment", "time", "count")
+
+plot <- rep(rep(levels(mna$plot), each=4), nlevels(mna$species))
+species <- rep(levels(mna$species), each=(4*nlevels(mna$plot)))
+treatment <- rep(c("treatment", "control"), length(species)/2)
+time <- rep(c("before", "before", "after", "after"), length(species)/4)
+countsp <- rep(NA, length(time))
+sum.data <- data.frame(plot, species, treatment, time, countsp)
+for(i in 1:nrow(sum.data)){
+  cur.row <- sum.data[i,]
+  cur.data <- subset(mna, species==cur.row$species)
+  cur.data <- subset(cur.data, time==cur.row$time)
+  cur.data <- subset(cur.data, plot==cur.row$plot)
+  cur.data <- subset(cur.data, treatment==cur.row$treatment)
+  sum.data$countsp[i] <- nrow(cur.data)
+}
+
+plot <- rep(levels(mna$plot), nlevels(mna$species))
+species <- rep(levels(mna$species), each=nlevels(mna$plot))
+diffs <- rep(NA, length(species))
+diff.data <- data.frame(plot, species, diffs)
+for(i in 1:nrow(diff.data)){
+  cur.row <- diff.data[i,]
+  cur.plot <- subset(sum.data, plot==cur.row$plot)
+  cur.plot <- subset(cur.plot, species==cur.row$species)
+  diff.data$diffs[i] <- (cur.plot$countsp[3] - cur.plot$countsp[4]) - 
+    (cur.plot$countsp[1] - cur.plot$countsp[2])
+}
+
+ggplot(diff.data, aes(factor(plot), diffs)) + geom_bar(stat="identity") + 
+  facet_wrap(~species)
+
+boxplot(diff.data$diffs ~ diff.data$species)
+
 # Plot unique inidividual results by species from 2015
-unique.lokern.15 <- subset(lokern, type == "N")
-n.plot <- ggplot(unique.lokern, aes(factor(plot)))
+mna.before <- subset(my.data, type == "N")
+mna.before <- subset(my.data, time == "before")
+n.plot <- ggplot(mna.before, aes(factor(plot)))
 n.plot + geom_bar() + facet_wrap(~species) 
-                                                         
+                                            
+
+             
 # Plot unique inidividual results by species from 2016
 unique.lokern <- subset(lokern, type == "N")
 n.16.plot <- ggplot(unique.lokern, aes(factor(plot)))
