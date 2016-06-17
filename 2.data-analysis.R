@@ -11,6 +11,7 @@ library(reshape)
 
 ### Load all Lokern data
 my.data <- read.csv("../Data/supp-data-combined.csv")
+my.data$weight <- my.data$total.weight - my.data$bag.weight
 
 #######
 # 2. Visualize prelim results (total captured at each site, movement, body weight,
@@ -74,6 +75,35 @@ ggplot(diff.data, aes(factor(plot), diffs)) + geom_bar(stat="identity") +
 ggplot(diff.data, aes(factor(species), diffs)) + geom_point(stat="identity")
 
 boxplot(diff.data$diffs ~ diff.data$species)
+
+ggplot(mna, aes(factor(time), weight)) + geom_point() +
+  facet_wrap(~treatment + species)
+
+### Compare weights betwen treatment/control for GKR
+gkr.data <- subset(my.data, species=="DIIN")
+
+weight.diffs <- NULL
+for(i in unique(gkr.data$plot)){
+  cur.plot <- subset(gkr.data, plot==i)
+  for(j in unique(cur.plot$left.ear)){
+    cur.rat <- subset(cur.plot, left.ear==j)
+#    before <- subset(cur.rat, time=="before")
+#    after <- subset(cur.rat, time=="after")
+#    before.weight <- mean(before$weight, na.rm=TRUE)
+#    after.weight <- mean(after$weight, na.rm=TRUE)
+#    diff <- after.weight - before.weight
+#    weight.diffs <- rbind(weight.diffs, 
+#                          data.frame(i, j, unique(cur.rat$treatment), 
+#                                                  before.weight, after.weight))  
+    weight <- mean(cur.rat$weight, na.rm=TRUE)
+    weight.diffs <- rbind(weight.diffs, data.frame(i, j, unique(cur.rat$treatment),
+                                                   cur.rat$time[1], weight))
+  }
+}
+#colnames(weight.diffs) <- c("plot", "rat", "treatment", "before", "after")
+colnames(weight.diffs) <- c("plot", "rat", "treatment", "time", "weight")
+weight.aov <- lm(weight ~ treatment*time, data=weight.diffs)
+summary(weight.aov)
 
 # Plot unique inidividual results by species from 2015
 mna.before <- subset(my.data, type == "N")
