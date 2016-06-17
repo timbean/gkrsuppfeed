@@ -115,6 +115,9 @@ after <- subset(gkr.data, time=="after")
 before.test <- glm(repro2 ~ treatment, data=before, family="binomial")
 after.test <- glm(repro2 ~ treatment, data=after, family="binomial")
 
+exp(cbind(OR = coef(before.test), confint(before.test)))
+exp(cbind(OR = coef(after.test), confint(after.test)))
+
 # Plot unique inidividual results by species from 2015
 mna.before <- subset(my.data, type == "N")
 mna.before <- subset(my.data, time == "before")
