@@ -71,6 +71,8 @@ for(i in 1:nrow(diff.data)){
 ggplot(diff.data, aes(factor(plot), diffs)) + geom_bar(stat="identity") + 
   facet_wrap(~species)
 
+ggplot(diff.data, aes(factor(species), diffs)) + geom_point(stat="identity")
+
 boxplot(diff.data$diffs ~ diff.data$species)
 
 # Plot unique inidividual results by species from 2015
