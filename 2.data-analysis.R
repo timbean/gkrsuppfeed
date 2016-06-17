@@ -81,6 +81,7 @@ ggplot(mna, aes(factor(time), weight)) + geom_point() +
 
 ### Compare weights betwen treatment/control for GKR
 gkr.data <- subset(my.data, species=="DIIN")
+gkr.data <- subset(gkr.data, age=="A")
 
 weight.diffs <- NULL
 for(i in unique(gkr.data$plot)){
@@ -104,7 +105,7 @@ for(i in unique(gkr.data$plot)){
 colnames(weight.diffs) <- c("plot", "rat", "treatment", "time", "weight")
 weight.aov <- lm(weight ~ treatment*time, data=weight.diffs)
 summary(weight.aov)
-
+boxplot(weight.diffs$weight ~ weight.diffs$treatment + weight.diffs$time)
 # Plot unique inidividual results by species from 2015
 mna.before <- subset(my.data, type == "N")
 mna.before <- subset(my.data, time == "before")
