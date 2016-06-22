@@ -286,3 +286,59 @@ mark.out.comb <- paste(mark.out.comb, ";", sep="")
 fileconn <- file("../Analysis/cnpa-robust.inp")
 writeLines(mark.out.comb, fileconn)
 close(fileconn)
+
+
+
+
+
+### Capture history for combined data
+unique.indivs <- subset(my.data, type == "N")
+
+gkr <- subset(my.data, species == "DIIN")
+
+all.cap.hist <- NULL
+
+for(k in unique(gkr$time)){
+  cur.time <- subset(gkr, time == k)
+  for(l in unique(gkr$site)){
+    cur.site <- subset(cur.time, site==l)
+    for(i in unique(cur.site$left.ear)){
+      cur.gkr <- subset(cur.site, left.ear == i)
+      cur.trap.hist <- NULL
+      for(j in 1:5){
+        if(j %in% unique(cur.gkr$night)){
+          cur.trap.hist <- paste(cur.trap.hist, "1", sep="")    
+        } else {
+          if(j > 3 && as.character(unique(cur.gkr$plot)) %in% c("1", "2", "4", "S1", "S2", "S3")){
+            cur.trap.hist <- paste(cur.trap.hist, ".", sep="")
+          } else {
+          cur.trap.hist <- paste(cur.trap.hist, "0", sep="")
+          }
+        }
+      }
+      cur.rat <- data.frame(paste(substr(k,1,1), substr(unique(cur.gkr$treatment),1,1), 
+                                unique(cur.gkr$plot), sep=""), i, cur.trap.hist)
+      all.cap.hist <- rbind(all.cap.hist, cur.rat)
+    }
+  }
+}
+colnames(all.cap.hist) <- c("plot", "indiv", "hist")
+
+# Generate table of counts of different recapture histories
+temp <- as.data.frame.matrix(table(all.cap.hist$hist, all.cap.hist$plot))
+temp$cap.hist <- row.names(temp)
+mark.inp <- data.frame(temp$cap.hist, temp[,1:32])
+
+# alternate attempts at creating a summary table
+#sum.hist.16 <- gather(temp, cap.hist, site, IVC:P89E)
+#colnames(sum.hist.16) <- c("cap.hist", "site", "num")
+
+# Save output
+head.of.file <- paste(colnames(mark.inp), collapse=" ")
+head.of.file <- paste("/*", head.of.file, "*/")
+mark.out <- apply(mark.inp, 1, paste, collapse=" ")
+mark.out <- paste(mark.out, ";", sep="")
+fileconn <- file("../Analysis/all-data.inp")
+writeLines(head.of.file, fileconn)
+writeLines(mark.out, fileconn)
+close(fileconn)
