@@ -78,6 +78,16 @@ ggplot(subset(diff.data, species=="DIIN"), aes(factor(plot), diffs)) + geom_bar(
 ggplot(subset(diff.data, species!="DIIN"), aes(factor(plot), diffs)) + geom_bar(stat="identity") + 
   facet_wrap(~species)
 
+# Plot differences in MNA GKR before/after vs. control/treatment
+sum.data$time <- with(sum.data, factor(time, levels=rev(levels(time))))
+ggplot(subset(sum.data, species=="DIIN"), aes(factor(time), countsp, fill=treatment)) + 
+  geom_bar(position="dodge", stat="identity") + facet_wrap(~plot) +
+  labs(x="", y="Minimum number alive") + scale_fill_grey(start=0.5, end=0) + theme_bw() +
+  theme(legend.title=element_blank())
+
+ggplot(subset(sum.data, species=="DIIN"), aes(factor(treatment), countsp, fill=time)) + 
+  geom_bar(position="dodge", stat="identity") + facet_wrap(~plot) +
+  labs(x="", y="Minimum number alive")
 
 ggplot(diff.data, aes(factor(species), diffs)) + geom_point(stat="identity")
 
