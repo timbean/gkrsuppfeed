@@ -1,5 +1,9 @@
 my.data <- read.csv("../Analysis/huggins-results.csv")
 
+library(ggplot2)
+
+### Effective sample size = 1,728 (capture histories * nights trapped)
+
 dodge <- position_dodge(width=0.9)
 ggplot(my.data, aes(Time, Nhat, fill=Treatment)) +
   geom_bar(position="dodge", stat="identity") + facet_wrap(~Plot) +

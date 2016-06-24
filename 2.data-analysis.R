@@ -4,6 +4,7 @@ library(ggplot2)
 library(plyr)
 library(tidyr)
 library(reshape)
+library(lmer)
 
 #######
 # 1. Load and clean data
@@ -12,6 +13,11 @@ library(reshape)
 ### Load all Lokern data
 my.data <- read.csv("../Data/supp-data-combined.csv")
 my.data$weight <- my.data$total.weight - my.data$bag.weight
+my.data$plot2 <- mapvalues(my.data$plot, from=c("1", "2", "4", "IV", "P88", "P89", "S1", "S2", "S3"), 
+                               to=c("Lokern-1", "Lokern-2", "Lokern-4", "Panoche-IV",
+                                    "Panoche-88", "Panoche-89", "Carrizo-S1", "Carrizo-S2",
+                                    "Carrizo-S3"))
+
 
 #######
 # 2. Visualize prelim results (total captured at each site, movement, body weight,
@@ -19,7 +25,7 @@ my.data$weight <- my.data$total.weight - my.data$bag.weight
 #######
 
 # Subtract minimun number of alive across years/plots...
-mna <- subset(my.data, type=="N")
+mna <- subset(my.data, type=="N" | type=="S")
 mna$species <- factor(mna$species)
 #table(mna$plot, mna$time, mna$treatment, mna$species)
 #test <- ddply(mna, .(time, site), summarize, count(species))
@@ -100,6 +106,9 @@ ggplot(mna, aes(factor(time), weight)) + geom_point() +
 ### Compare weights betwen treatment/control for GKR
 gkr.data <- subset(my.data, species=="DIIN")
 gkr.data <- subset(gkr.data, age=="A")
+gkr.data <- subset(gkr.data, repro != "P")
+gkr.data <- subset(gkr.data, sex == "M" | sex == "F")
+gkr.data <- gkr.data[gkr.data$weight > 100,]
 
 weight.diffs <- NULL
 for(i in unique(gkr.data$plot)){
@@ -116,13 +125,40 @@ for(i in unique(gkr.data$plot)){
 #                                                  before.weight, after.weight))  
     weight <- mean(cur.rat$weight, na.rm=TRUE)
     weight.diffs <- rbind(weight.diffs, data.frame(i, j, unique(cur.rat$treatment),
-                                                   cur.rat$time[1], weight))
+                                                   cur.rat$time[1], weight, cur.rat$sex[1], cur.rat$site[1]))
   }
 }
 #colnames(weight.diffs) <- c("plot", "rat", "treatment", "before", "after")
-colnames(weight.diffs) <- c("plot", "rat", "treatment", "time", "weight")
-weight.aov <- lm(weight ~ treatment*time, data=weight.diffs)
-summary(weight.aov)
+colnames(weight.diffs) <- c("plot", "rat", "treatment", "time", "weight", "sex", "site")
+weight.aov.full <- lm(weight ~ treatment*time + sex, data=weight.diffs)
+summary(weight.aov.full)
+AIC(weight.aov.full)
+
+weight.cpna <- subset(weight.diffs, site=="cpna")
+weight.lok <- subset(weight.diffs, site=="lokern")
+weight.czo <- subset(weight.diffs, site=="carrizo")
+
+weight.aov.cpna <- lm(weight ~ treatment*time + sex, data=weight.cpna)
+summary(weight.aov.cpna)
+
+weight.aov.lok <- lm(weight ~ treatment*time + sex, data=weight.lok)
+summary(weight.aov.lok)
+
+weight.aov.czo <- lm(weight ~ treatment*time + sex, data=weight.czo)
+summary(weight.aov.czo)
+
+weight.diffs$time <- with(weight.diffs, factor(time, levels=rev(levels(time))))
+ggplot(weight.diffs, aes(factor(treatment), weight)) + geom_boxplot(aes(fill=time)) +
+  theme_bw() + scale_fill_grey(start=0.5, end=0) +
+  labs(x="", y="Weight (g)") + facet_wrap(~site) +
+  theme(legend.title=element_blank())
+
+weight.treatment <- lm(weight ~ treatment + sex, data=weight.diffs)
+AIC(weight.treatment)
+
+weight.treatment.time <- lm(weight ~ treatment + time + sex, data=weight.diffs)
+AIC(weight.treatment.time)
+
 boxplot(weight.diffs$weight ~ weight.diffs$treatment + weight.diffs$time)
 
 
@@ -130,176 +166,17 @@ boxplot(weight.diffs$weight ~ weight.diffs$treatment + weight.diffs$time)
 gkr.data <- subset(gkr.data, type=="N" | type=="S")
 before <- subset(gkr.data, time=="before")
 after <- subset(gkr.data, time=="after")
-before.test <- glm(repro2 ~ treatment, data=before, family="binomial")
-after.test <- glm(repro2 ~ treatment, data=after, family="binomial")
+before.test <- glm(repro2 ~ treatment*site, data=before, family="binomial")
+after.test <- glm(repro2 ~ treatment*site, data=after, family="binomial")
 
 exp(cbind(OR = coef(before.test), confint(before.test)))
 exp(cbind(OR = coef(after.test), confint(after.test)))
 
-# Plot unique inidividual results by species from 2015
-mna.before <- subset(my.data, type == "N")
-mna.before <- subset(my.data, time == "before")
-n.plot <- ggplot(mna.before, aes(factor(plot)))
-n.plot + geom_bar() + facet_wrap(~species) 
-                                            
-
-             
-# Plot unique inidividual results by species from 2016
-unique.lokern <- subset(lokern, type == "N")
-n.16.plot <- ggplot(unique.lokern, aes(factor(plot)))
-n.16.plot + geom_bar() + facet_wrap(~species)
-
-sum.15 <- as.data.frame.matrix(table(unique.lokern$plot, unique.lokern$species))
-sum.15$plot <- row.names(sum.15)
-sum.15$year <- rep(2015, nrow(sum.15))
-sum.16 <- as.data.frame.matrix(table(unique.lokern$plot, unique.lokern$species))
-sum.16$plot <- row.names(sum.16)
-sum.16$year <- rep(2016, nrow(sum.16))
-
-ses.recaps <- subset(lokern, type ==  "S")
-
-## See if anyone moved
-gkr.2015 <- subset(lokern, species == "DIIN")
-gkr.2016 <- subset(lokern, species == "DIIN")
-
-for(i in unique(ses.recaps$left.ear)){
-  cur.gkr <- subset(lokern, left.ear == i)
-  cur.gkr.16 <- subset(lokern, left.ear == i)
-  print(paste("Left Ear:", i, "2015 Plots:", unique(cur.gkr$plot), "2016 Plots:", 
-              unique(cur.gkr.16$plot)))
-}
 
 
 #######
 # 3. Create unique capture histories for export
 #######
-
-# 2015
-all.cap.hist.15 <- NULL
-
-for(i in unique(gkr.2015$left.ear)){
-  cur.gkr <- subset(gkr.2015, left.ear == i)
-  cur.trap.hist <- NULL
-  for(j in 1:5){
-    if(j %in% unique(cur.gkr$night)){
-      cur.trap.hist <- paste(cur.trap.hist, "1", sep="")    
-    } else {
-      cur.trap.hist <- paste(cur.trap.hist, "0", sep="")
-    }
-  }
-  cur.rat <- data.frame(unique(cur.gkr$plot), i, cur.trap.hist)
-  all.cap.hist.15 <- rbind(all.cap.hist.15, cur.rat)
-}
-colnames(all.cap.hist.15) <- c("plot", "indiv", "hist")
-
-# Generate table of counts of different recapture histories for 2015
-#sum.cap.hist.15 <- count(all.cap.hist.15$plot, all.cap.hist.15$hist)
-temp <- as.data.frame.matrix(table(all.cap.hist.15$hist, all.cap.hist.15$plot))
-temp$cap.hist <- row.names(temp)
-#sum.hist.15 <- gather(temp, cap.hist, site, IVC:P89E)
-#colnames(sum.hist.15) <- c("cap.hist", "site", "num")
-#spread.hist <- spread(sum.hist.15, site, num)
-
-mark.inp <- data.frame(temp$cap.hist, temp[,1:6])
-
-# alternate attempts at creating a summary table
-#sum.hist.16 <- gather(temp, cap.hist, site, IVC:P89E)
-#colnames(sum.hist.16) <- c("cap.hist", "site", "num")
-
-# Save output
-mark.out.15 <- apply(mark.inp, 1, paste, collapse=" ")
-mark.out.15 <- paste(mark.out.15, ";", sep="")
-fileconn <- file("../Analysis/cnpa15.inp")
-writeLines(mark.out.15, fileconn)
-close(fileconn)
-
-# 2016
-all.cap.hist.16 <- NULL
-
-for(i in unique(gkr.2016$left.ear)){
-  cur.gkr <- subset(gkr.2016, left.ear == i)
-  cur.trap.hist <- NULL
-  for(j in 1:5){
-    if(j %in% unique(cur.gkr$night)){
-      cur.trap.hist <- paste(cur.trap.hist, "1", sep="")    
-    } else {
-      cur.trap.hist <- paste(cur.trap.hist, "0", sep="")
-    }
-  }
-  cur.rat <- data.frame(unique(cur.gkr$plot), i, cur.trap.hist)
-  all.cap.hist.16 <- rbind(all.cap.hist.16, cur.rat)
-}
-colnames(all.cap.hist.16) <- c("plot", "indiv", "hist")
-
-# Generate table of counts of different recapture histories for 2016
-temp <- as.data.frame.matrix(table(all.cap.hist.16$hist, all.cap.hist.16$plot))
-temp$cap.hist <- row.names(temp)
-mark.inp <- data.frame(temp$cap.hist, temp[,1:6])
-
-# alternate attempts at creating a summary table
-#sum.hist.16 <- gather(temp, cap.hist, site, IVC:P89E)
-#colnames(sum.hist.16) <- c("cap.hist", "site", "num")
-
-# Save output
-mark.out.16 <- apply(mark.inp, 1, paste, collapse=" ")
-mark.out.16 <- paste(mark.out.16, ";", sep="")
-fileconn <- file("../Analysis/cnpa16.inp")
-writeLines(mark.out.16, fileconn)
-close(fileconn)
-
-
-## Create Robust Design Capture History
-gkr.16.temp <- data.frame(gkr.2016$date, gkr.2016$night, gkr.2016$plot,
-                          gkr.2016$trap, gkr.2016$left.ear)
-gkr.16.temp$ses <- rep(2, nrow(gkr.16.temp))
-colnames(gkr.16.temp) <- c("date", "night", "plot", "trap", "left.ear", "session")
-
-gkr.15.temp <- data.frame(gkr.2015$date, gkr.2015$night, gkr.2015$plot,
-                          gkr.2015$trap, gkr.2015$left.ear)
-gkr.15.temp$ses <- rep(1, nrow(gkr.15.temp))
-colnames(gkr.15.temp) <- c("date", "night", "plot", "trap", "left.ear", "session")
-
-combined.data <- rbind(gkr.15.temp, gkr.16.temp)
-
-comb.cap.hist <- NULL
-
-for(i in unique(combined.data$left.ear)){
-  cur.gkr <- subset(combined.data, left.ear == i)
-  cur.trap.hist <- NULL
-  cur.ses <- subset(cur.gkr, session==1)
-  for(j in 1:5){
-    if(j %in% unique(cur.ses$night)){
-      cur.trap.hist <- paste(cur.trap.hist, "1", sep="")
-    } else {
-      cur.trap.hist <- paste(cur.trap.hist, "0", sep="")
-    }
-  }
-  
-  cur.ses <- subset(cur.gkr, session==2)
-  for(j in 1:5){
-    if(j %in% unique(cur.ses$night)){
-      cur.trap.hist <- paste(cur.trap.hist, "1", sep="")    
-    } else {
-      cur.trap.hist <- paste(cur.trap.hist, "0", sep="")
-    }
-  }
-  cur.rat <- data.frame(unique(cur.gkr$plot), i, cur.trap.hist)
-  comb.cap.hist <- rbind(comb.cap.hist, cur.rat)
-}
-colnames(comb.cap.hist) <- c("plot", "indiv", "hist")
-temp <- as.data.frame.matrix(table(comb.cap.hist$hist, comb.cap.hist$plot))
-temp$cap.hist <- row.names(temp)
-mark.inp <- data.frame(temp$cap.hist, temp[,1:6])
-
-# Save output
-mark.out.comb <- apply(mark.inp, 1, paste, collapse=" ")
-mark.out.comb <- paste(mark.out.comb, ";", sep="")
-fileconn <- file("../Analysis/cnpa-robust.inp")
-writeLines(mark.out.comb, fileconn)
-close(fileconn)
-
-
-
 
 
 ### Capture history for combined data
@@ -311,14 +188,14 @@ all.cap.hist <- NULL
 
 for(k in unique(gkr$time)){
   cur.time <- subset(gkr, time == k)
-  for(l in unique(gkr$site)){
-    cur.site <- subset(cur.time, site==l)
-    for(i in unique(cur.site$left.ear)){
-      cur.gkr <- subset(cur.site, left.ear == i)
+  for(l in unique(gkr$plot)){
+    cur.plot <- subset(cur.time, plot==l)
+    for(i in unique(cur.plot$left.ear)){
+      cur.gkr <- subset(cur.plot, left.ear == i)
       cur.trap.hist <- NULL
       for(j in 1:5){
         if(j %in% unique(cur.gkr$night)){
-          cur.trap.hist <- paste(cur.trap.hist, "1", sep="")    
+          cur.trap.hist <- paste(cur.trap.hist, "1", sep="")
         } else {
           if(j > 3 && as.character(unique(cur.gkr$plot)) %in% c("1", "2", "4", "S1", "S2", "S3")){
             cur.trap.hist <- paste(cur.trap.hist, ".", sep="")
@@ -327,7 +204,7 @@ for(k in unique(gkr$time)){
           }
         }
       }
-      cur.rat <- data.frame(paste(substr(k,1,1), substr(unique(cur.gkr$treatment),1,1), 
+      cur.rat <- data.frame(paste(substr(k,1,1), substr(unique(cur.gkr$treatment),1,1),
                                 unique(cur.gkr$plot), sep=""), i, cur.trap.hist)
       all.cap.hist <- rbind(all.cap.hist, cur.rat)
     }
@@ -371,5 +248,12 @@ for(i in unique(gkr$left.ear)){
   cur.rat <- subset(gkr, left.ear==i)
   if(length(unique(cur.rat$plot)) > 1){
     print(paste("Sites:", unique(cur.rat$site), "Rat:", i))
+  }
+}
+
+for(i in unique(all.cap.hist$indiv)){
+  cur.rat <- subset(all.cap.hist, indiv == i)
+  if(nrow(cur.rat) > 1){
+    print(cur.rat)
   }
 }
