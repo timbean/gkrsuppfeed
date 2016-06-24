@@ -55,6 +55,7 @@ for(i in 1:nrow(sum.data)){
   cur.data <- subset(cur.data, plot==cur.row$plot)
   cur.data <- subset(cur.data, treatment==cur.row$treatment)
   sum.data$countsp[i] <- nrow(cur.data)
+  #sum.data$countsp[i] <- length(unique(cur.data$left.ear))
 }
 
 plot <- rep(levels(mna$plot), nlevels(mna$species))
@@ -352,3 +353,23 @@ mark.out <- c(head.of.file, mark.out)
 fileconn <- file("../Analysis/all-data.inp")
 writeLines(mark.out, fileconn)
 close(fileconn)
+
+
+
+
+
+
+for(i in 1:nrow(cur.data)){
+  cur.rat <- cur.data[i,]$left.ear
+  other.data <- cur.data[-i,]
+  if(cur.rat %in% other.data$left.ear){
+    print(cur.rat)
+  }
+}
+
+for(i in unique(gkr$left.ear)){
+  cur.rat <- subset(gkr, left.ear==i)
+  if(length(unique(cur.rat$plot)) > 1){
+    print(paste("Sites:", unique(cur.rat$site), "Rat:", i))
+  }
+}
